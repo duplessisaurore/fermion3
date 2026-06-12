@@ -11,18 +11,17 @@
 </div>
 
 
-## 🌌 Table of Contents
+## ⚛️ Table of Contents
 - [<code>✨ What is Fermion3?</code>](#what-is-fermion3)
 - [<code>🔭 Community</code>](#community)
-- [<code>🔬 Fermion3 Language</code>](#fermion3-language)
-- [<code>🌌 Assembly/Disassembly</code>](#fermion3-asm-disasm)
+- [<code>🧬 Fermion3 Language</code>](#fermion3-language)
 - [<code>🧾 License</code>](#license)
 - [<code>🎓 Acknowledgments</code>](#acknowledgements)
 
 <a name="what-is-fermion3"></a>
 ## ✨ What is Fermion3?
 
-`Fermion3` is an experimental free and open-source imperative statically typed language that transpiles to the `Quark3` textual assembly language. The `Quark3` code can then be compiled to the `Lepton3` bytecode for execution by the virtual machine. 
+`Fermion3` is an experimental free and open-source imperative dynamically typed language that transpiles to the `Quark3` textual assembly language. The `Quark3` code can then be compiled to the `Lepton3` bytecode for execution by the virtual machine. 
 
 `Fermion3` aims to be an improvement of the prior `Faerlys` and `Quasar2` languages. As it is *essentially* version 3.0, there is a `3` at the end.
 
@@ -36,6 +35,11 @@ Before contributing or participating in discussions with the community, you shou
 If there are any other communities that should be added to the list, please make a PR.
 
 If you'd like to help build Fermion3, check out the **[Contributor's Guide](./CONTRIBUTING.md)**.
+
+<a name="fermion3-language"></a>
+## 🧬 Fermion3 Language
+
+The `Fermion3` language syntax is described in the `LANGUAGE.md` file in the root of the repository, **[check it out](./LANGUAGE.md)** to learn. 
 
 <a name="license"></a>
 ## 🧾 License
