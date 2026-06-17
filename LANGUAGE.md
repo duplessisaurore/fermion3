@@ -395,7 +395,17 @@ Return annotations are checked when a function completes, such that the result m
 
 ## Type Universes and Chunking
 
-Each type 
+Each value is typed with the types stored next to the value in bit chunks.
+
+Whenever a value is passed into a context which checks its type, the validator will check if the type's bit is in the bit chunks of the value.
+
+Whenever a type is casted using the guard with annotations or "as" and the type is not already in the bit chunks, the bit for the type will be set.
+
+The full bit array is inherently then a universe of types. Each concrete defined type gets a bit.
+
+This is highly applicable to immutable data which can simply continue gaining type bits without needing to be rechecked on every safe cast. This applies even across function call boundaries (passing a value into a function with a new type check will assign the type bit to all references to the same typed value).
+
+Mutable data cannot guarantee the new data meets all the types in the chunks. Therefore on reassigning a mutable binding, only the direct annotated or casted type will be checked/kept.
 
 ## Parametric types in functions
 
