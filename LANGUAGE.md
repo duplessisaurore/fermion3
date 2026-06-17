@@ -146,9 +146,42 @@ Immutable bindings cannot be rebound.
 
 Mutable bindings can be rebound but only within the scope they are declared in.
 
+## Shadowing
+
+A binding can be shadowed by a new binding of the same name in an inner scope. This is because the *outer binding* won't be affected.
+
+```
+let x = 5
+{
+    let x = 10
+    print(x)    // 10
+}
+print(x)        // 5, outer x is unchanged
+
+// Shadowing a mutable binding does not make the shadow mutable
+let mut counter = 0
+{
+    let counter = 100       // immutable shadow
+    counter = counter + 500 // not allowed !
+}
+print(counter)    // 0, outer counter unchanged
+```
+
+Shadowing is not mutation. The outer binding is never touched, and the shadow disappears when its scope ends.
+
 ## Type Definitions
 
 ```
+// There are many primitive types in Fermion3, some of the most important are:
+Float
+Int
+Bool
+Any (any type!)
+// .... and others
+
+// We can make new type aliases for existing types
+type MyInt = Int
+
 // A type can be a "guard" which narrows down some concrete type using a closure that accepts the value
 type Positive = Int where (fn(x) => x > 0)
 
@@ -161,7 +194,7 @@ type Point = object {
 // An object type with a guard
 type UnitVector = Point where (
     fn(v) => {
-        let mag = sqrt(v.x * v.x + v.y * v.y)
+        let mag = sqrt(v.x**2 + v.y**2)
         abs(mag - 1.0) < 0.0001
     }
 )
@@ -172,24 +205,24 @@ type UnitVector = object {
     y: Float
 } where (
     fn(v) => {
-        let mag = sqrt(v.x * v.x + v.y * v.y)
+        let mag = sqrt(v.x**2 + v.y**2)
         abs(mag - 1.0) < 0.0001
     }
 )
 
 // Types are values, so we can define a "parametric type" which is a type constructed with parameters
-type Bounded(T, low, high) = T where (
+type Bounded<T, low, high> = T where (
     fn(x) => { x >= low && x <= high } 
 )
 
 // Using a parametric type, this Byte is an alias
-type Byte = Bounded(Int, 0, 255)
+type Byte = Bounded<Int, 0, 255>
 
 // We can also guard this alias
 type NonZeroByte = Byte where (fn(x) => x != 0)
 
 // A parametric object type
-type Pair(A, B) = object {
+type Pair<A, B> = object {
     first: A,
     second: B
 }
@@ -208,31 +241,44 @@ type Direction = enum {
 type Shape = enum {
     Circle { radius: Float },
     Rectangle { width: Float, height: Float},
+
+    // Or just a variant with no data
     Point
 }
 
 // Parametric enums
-type Option(T) = enum {
+type Option<T> = enum {
     Some { value: T },
     None
-}
-
-// "Nameless" enum variants that carry data
-// also exist which essentially assign each field
-// in the order of definition to an index
-type Result(T, E) = enum {
-    Ok(T),
-    Err(E)
-}
-
-// This is inherently equal to
-type Result(T, E) = enum {
-    Ok { 0: T },
-    Err { 0: E }
 }
 ```
 
 Types are values. `type X = ...` at the top level binds the name X to a type value, exactly like let binds a name to a regular value.
+
+## Function Types
+
+As functions are values, they also have types.
+
+```
+// A function taking an Int and returning an Int
+Int -> Int
+
+// A function taking two arguments
+(Int, Int) -> Int
+
+// A function taking no arguments
+() -> Int
+
+// Nested function types (a function returning a function)
+Int -> (Int -> Int)
+```
+
+These can be used where we expect types too
+
+```
+// A type that expects a predicate function
+type Predicate<T> = T -> Bool
+```
 
 ## Methods
 
@@ -248,7 +294,7 @@ type Point = object {
 
     // Distance to another point
     fn distance_to(self, other) =>
-        sqrt((self.x - other.x)^2 + (self.y - other.y)^2)
+        sqrt((self.x - other.x)**2 + (self.y - other.y)**2)
 
     // Translate this point by some amount..
     fn translate(self, dx, dy) => {
@@ -265,7 +311,7 @@ type UnitVector = object {
     x: Float,
     y: Float
 } where (
-    fn(v) => abs(sqrt(v.x^2 + v.y^2) - 1.0) < 0.0001
+    fn(v) => abs(sqrt(v.x**2 + v.y**2) - 1.0) < 0.0001
 ) with {
     fn dot(self, other) =>
         self.x * other.x + self.y * other.y
@@ -289,9 +335,19 @@ type Shape = enum {
 // We can also add methods to an alias
 // This is the byte type from earlier but with the `with` block
 // This keeps all the methods from bounded 
-type Byte = Bounded(Int, 0, 255) with {
+type Byte = Bounded<Int, 0, 255> with {
     fn to_hex(self) => "0x${format_hex(self)}"
     fn to_binary(self) => "0b${format_binary(self)}"
+}
+
+type NonZeroByte = Byte where (fn(x) => x != 0) with {
+    fn to_hex(self) -> String => "0x${format_hex(self)} (nonzero)"
+
+    // Cast self to the parent alias to call its version of an overridden method
+    //
+    // Methods are inherited from parent aliases in the chain. 
+    // The most derived alias wins when a method name conflicts.
+    fn to_hex_plain(self) -> String => (self as Byte).to_hex()
 }
 ```
 
@@ -312,16 +368,54 @@ fn add(a: Int, b: Int) -> Int => a + b
 let x: Positive = 5
 
 // Parametric types in the parameters
-type Bounded(T: Positive, low, high) = T where (
+type Bounded<T: Positive, low, high> = T where (
     fn(x) => { x >= low && x <= high } 
 )
+
+// Type parameters are in scope inside a with block, 
+// so they can be used as annotations on methods just like any other type.
+type Pair<A, B> = object {
+    first: A,
+    second: B
+} with {
+    fn swap(self) -> Pair<B, A> =>
+        Pair { first: self.second, second: self.first }
+
+    fn map_first(self, f: A -> B) -> Pair<B, B> =>
+        Pair { first: f(self.first), second: self.second }
+}
 ```
 
 Annotations will automatically resolve such that on binding to the thing, say a local name or a function parameter or a parametric type, the guard is checked against the value.
 
 Return annotations are checked when a function completes, such that the result must satisfy the declared return type before being returned to the caller.
 
+
 **These mechanisms are all at runtime.**
+
+## Type Universes and Chunking
+
+Each type 
+
+## Parametric types in functions
+
+Functions can also have types as parameters similar to how parametric types have types as parameters.
+
+```
+// A type as a parameter to a function, in the same syntax as parametric types
+fn identity<T>(x: T) -> T => x
+
+// Assume some cons cell type with checks...
+type List<T> = ...
+
+// We can also constrain the type in the parametric types similar to normal type definitions
+fn sort<T: Comparable>(xs: List<T>) -> List<T> => ...
+
+// Closures can also have parametric types in the same way
+let i = fn<T>(x: T) -> T => x
+```
+
+This lets you enforce relationships between types, in the case of `first` we ensure that the return type of first is the same as the element type of the input array.
 
 ## Type Casts
 
@@ -420,10 +514,10 @@ let c = [...a, ...b]         // [1, 2, 3, 4]
 
 ```
 // Expression form (both branches required)
-let result = if x > 0 then "positive" else "non-positive"
+let result = if x > 0 "positive" else "non-positive"
 
 // Block form
-if x > 0 then {
+if x > 0 {
     do_something()
     "positive"
 } else {
@@ -431,8 +525,8 @@ if x > 0 then {
 }
 
 // Else-if exists for when that's needed.
-if x > 0 then "positive"
-else if x < 0 then "negative"
+if x > 0 "positive"
+else if x < 0 "negative"
 else "zero"
 ```
 
@@ -456,9 +550,11 @@ match x {
 }
 
 // Match on objects
+// Untyped object literals cannot be used directly.
+// A field can be rebound to another name on matching.
 match point {
     Point { x: 0.0, y } => "on y axis at ${y}",
-    Point { x, y }      => "at ${x}, ${my_y}"
+    Point { x, y: my_y }      => "at ${x}, ${my_y}"
 }
 
 // Match on arrays
@@ -470,9 +566,14 @@ match xs {
 }
 
 // Match on enums with tags
+type Result<T, E> = enum {
+    Ok { value: T },
+    Err { error: E }
+}
+
 match result {
-    Result.Ok(value) => value,
-    Result.Err(e)    => raise e
+    Result.Ok { value }  => value,
+    Result.Err { error }    => raise error
 }
 
 // Match on enums with objects similar in the same way as Object matching
@@ -485,7 +586,7 @@ match result {
 // Match with block body
 match n {
     0 => {
-        log("got zero")
+        print("got zero")
         "zero"
     },
     n => "other"
@@ -495,33 +596,61 @@ match n {
 ## Loops
 
 ```
-// while loop, used for boolean condition
+// While loop, used for boolean condition
 let mut i = 0
 while i < 10 {
     i = i + 1
 }
 
-// for loop, used for an access to each element
+// For loop, used for an access to each element
 // in a collection
 for x in [1, 2, 3] {
-    log(x)
+    print(x)
 }
 
-// An infinite loop
+// An infinite loop, which can be broken out of with the break keyword
 loop {
     let x = compute()
+    if x == 37 {
+        break
+    }
 }
 
-// Loops can be broken out of with the "break" keyword similar to other languages, which returns a value, an empty break is therefore a break on the unit type
-// When no value is returned by the loop the () unit value is bound
+// Values can be returned from a loop using the break keyword
+// When no break is reached, or break is used without a value,
+// the () unit value is returned
 let result = loop {
     break 5
 }
 
-// The block binding still applies, the last value computed in the last iteration of the loop is the value that result is bound to here, which would be log(3)
-// If the list is empty here since no value is returned, result is bound to () 
-let result = for x in [1,2,3] {
-    log(x)
+// The same applies to for and while loops
+let result = for x in [1, 2, 3] {
+    if x == 2 {
+        break x // result is 2
+    }
+}
+
+
+// If no break is reached, the loop returns the last value
+// produced by the block in its final iteration
+// Here the block's last expression is x, so result is 3
+let result = for x in [1, 2, 3] {
+    x
+}
+
+// If the block's last expression doesn't always produce a value,
+// the result may be () even if the loop ran
+// Here the block ends in an if with no else, which is ()
+// when the condition isn't met, so result is ()
+let result = for x in [1, 2, 3] {
+    if x == 99 {
+        break x
+    }
+}
+
+// An empty collection also produces ()
+let result = for x in [] {
+    x
 }
 ```
 
@@ -530,8 +659,7 @@ let result = for x in [1,2,3] {
 ```
 // A single value can be raised as an error
 raise "something went wrong"
-raise Result.Err("bad input")
-raise { code: 404, message: "not found" }
+raise Result.Err { error: "bad input" }
 ```
 
 ## Guard Errors
@@ -544,6 +672,26 @@ type Probability = Float
     fail (fn(x) => "expected a Float between 0.0 and 1.0 but got ${x}")
 ```
 
+When a type is an alias over another, all guards in the chain run in order from the outermost parent down to the most derived type. Validation short-circuits on the first failure, so if a parent guard fails the derived guards are never checked. This means fail messages will always come from the most relevant failing guard:
+
+```
+type Bounded<T, low, high> = T where (
+    fn(x) => x >= low && x <= high
+) fail (fn(x) => "expected value between ${low} and ${high} but got ${x}")
+
+type Byte = Bounded<Int, 0, 255>
+
+type NonZeroByte = Byte where (
+    fn(x) => x != 0
+) fail (fn(x) => "expected a non-zero Byte but got ${x}")
+
+// Fails with the Bounded fail message, NonZeroByte guard never runs
+let a = 300 as NonZeroByte
+
+// Fails with the NonZeroByte fail message, Bounded guard passes
+let b = 0 as NonZeroByte
+```
+
 ## Try/Catch
 
 ```
@@ -552,7 +700,7 @@ type Probability = Float
 let result = try {
     divide(10, 0)
 } catch e {
-    log("error: ${e}")
+    print("error: ${e}")
     -1
 }
 ```
@@ -651,28 +799,28 @@ By default, names introduced inside a macro are invisible to the call site. The 
 To intentionally export a name to the call site, prefix it with `#`:
 
 ```
-// Anaphoric If, essentially "it" can be referred to
-macro fn aif(cond, then_branch, else_branch) = '{
+// "it" can be referred to outside of this macro
+macro fn aif(cond, then_branch, else_branch) => '{
     let #it = $(cond)
-    if #it then $(then_branch) else $(else_branch)
+    if #it $(then_branch) else $(else_branch)
 }
 
 // caller can refer to 'it'
 @aif(find_user(id),
-    log("found: ${it}"),
-    log("not found")
+    print("found: ${it}"),
+    print("not found")
 )
 
 // This expands to:
 let it = find_user(id)
-if it then log("found: ${it}") else log("not found")
+if it print("found: ${it}") else print("not found")
 ```
 
 ## Pattern Matching in Macros
 
 ```
 // This will match on the AST (notice we are not generating a quoted thing) and produce the output at compile time
-macro fn optimise_add(expr) = match expr {
+macro fn optimise_add(expr) => match expr {
     '($(a) + 0) => a,
     '(0 + $(b)) => b,
     other       => other
@@ -692,6 +840,11 @@ x |> f(y)       // equivalent to f(x, y)
     |> map(fn(x) => x * 2)
     |> filter(fn(x) => x > 2)
     |> length
+
+// You can also use the _ placeholder for the value
+x |> f(_)
+
+"hello" |> _.upper()
 ```
 
 ## Is
@@ -738,7 +891,7 @@ has_method(x, "compare", 1)     // has compare taking one argument
 // For a static method with no `self`, the third parameter is just the literal argument count with nothing excluded.
 ```
 
-We can use this super powerful function as part of guards and aliases in a similar fashion to type classes in other languages (though this is all at runtime)! I like to call these ***Protocols***.
+We can use this super powerful function as part of guards. I like to call these ***Protocols***.
 
 ```
 type Displayable = Any where (
@@ -750,45 +903,94 @@ type Comparable = Any where (
 )
 ```
 
-Any type that has the required methods automatically satisfies the protocol. 
+## Capabilities
 
-These protocols have some sugar that helps with their construction
+Capabilities are the mechanism for foreign function interfacing in `Lepton3`, which can call rust code directly from an instruction.
+
+Using the builtin variadic function `cap` these can be called, the first argument is the capability no, the rest are the arguments to the capability. An example with file system based capabilities:
 
 ```
-protocol Comparable {
-    fn compare(self, other)
+let FILE_OPEN  = 1
+
+// An "open" file capability wrapper to ensure safe typing
+pub fn open(path: String, mode: String) -> Option<FileDescriptor> => {
+    try {
+        // The cap function automatically handles pushing things on the stack for the capability handler to take
+        Option.Some { value: cap(FILE_OPEN, path, mode) as FileDescriptor }
+    } catch _ {
+        Option.None
+    }
 }
-
-protocol Displayable {
-    fn to_string(self)
-}
-
-protocol Constructable {
-    fn new()
-    fn clone(self)
-}
-
-// These desugar to
-type Displayable = Any where (
-    fn(x) => has_method(x, "to_string", 0)
-)
-
-type Comparable = Any where (
-    fn(x) => has_method(x, "compare", 1)
-)
-
-type Constructable = Any where (
-    fn(x) => has_method(x, "new", 0) && has_method(x, "clone", 0)
-)
-
-// A type satisfies a protocol if it has the methods
-type Point = object {
-    x: Float,
-    y: Float
-} with {
-    fn new() => Point { x: 0.0, y: 0.0 }
-    fn clone(self) => Point { ...self }
-}
-
-Point is Constructable   // true
 ```
+
+## Destructuring
+
+Destructuring lets you unpack values into bindings directly, using the same patterns available in match. It works anywhere a binding is introduced.
+
+In let bindings:
+
+```
+// Object destructuring, similar to match an untyped object literal cannot be used directly
+let Point { x, y } = my_point
+
+// Rename a field on extraction
+let Point { x: px, y: py } = my_point    // binds px and py
+
+// Only want a certain number of fields?
+let Point { x, _ } = my_point    // only binds x
+
+// Array destructuring
+let [first, second] = xs
+let [head, ...tail] = xs
+
+// Nested
+let Point { x, y } = my_point
+let Pair { first: Point { x, y }, second } = my_pair
+
+// Enum variants
+let Option.Some { value } = maybe
+```
+
+These will check the type during bindings and will error if it does not match in the same way as an `as`.
+
+In function parameters:
+
+```
+// Destructure directly in the parameter list
+fn magnitude(Point { x, y }) => sqrt(x**2 + y**2)
+
+// Mixed with normal parameters
+fn translate(Point { x, y }, dx, dy) =>
+    Point { x: x + dx, y: y + dy }
+
+// Nested
+fn describe(Person { name, address: Address { city, country } }) =>
+    "${name} lives in ${city}, ${country}"
+```
+
+And in for loops:
+
+```
+// Destructure each element as it is bound
+for Point { x, y } in points {
+    print("point at ${x}, ${y}")
+}
+
+for [a, b] in pairs {
+    print("${a} and ${b}")
+}
+```
+
+## Entry Point
+
+Lastly, where does a `Fermion3` program begin? With the `main` function!
+
+```
+fn main(args) => {
+    let name = "world"
+    print("hello ${name}")
+}
+```
+
+It must always take a parameter `args` which is the arguments to the program (if any).
+
