@@ -57,6 +57,9 @@ false
 
 // Array literals
 [1, 2, 3]
+
+// An empty array literal cannot be used directly
+// since it has no type, but it exists ^^
 []
 
 // Untyped object literals
@@ -122,6 +125,19 @@ Chaining multiple infix calls is not permitted without parenthesis for precedenc
 // Allowed!
 (1 add 2) mul 3
 ```
+
+## Compound Assignment
+
+```
+// Compound assignment operators are sugar for rebinding using an
+// infix function call
+number += x     // number = number + x
+number -= x     // number = number - x
+number *= x     // number = number * x
+number /= x     // number = number / x
+number add= x   // number = number add x
+```
+
 
 ## Bindings
 
@@ -268,6 +284,9 @@ Int -> Int
 
 // A function taking no arguments
 () -> Int
+
+// A function returning no arguments
+Int -> ()
 
 // Nested function types (a function returning a function)
 Int -> (Int -> Int)
@@ -447,6 +466,16 @@ let T = Positive
 let value = 42 as T
 ```
 
+There is a special case when the target type is a primitive numeric type.
+
+```
+let x: Int = 42
+let y = x as Float    // 42.0
+let z = y as Int      // 42
+```
+
+Instead of checking guards and things. Instead, the `as Float` type cast will attempt to convert the value into a `Float` using lossy conversion. The same for the reverse (through truncation). 
+
 ## Object Construction
 
 Object literals are untyped and cannot be used directly since they do not refer to an object "schema"/type definition
@@ -497,13 +526,31 @@ SomeObject {
 
 This desugars in the same way as object construction does. The guard then runs on the new object
 
+## Enum Updating
+
+To update an enum, the same kind of spread syntax can be used.
+
+```
+// Similar to objects, original_circle which would be a Shape.Circle
+let bigger = Shape.Circle { 
+    ...original_circle, 
+    radius: original_circle.radius * 2.0 
+}
+```
+
 ## Array Construction
 
 Arrays are immutable. All operations that would modify an array produce a new array. The original is unaffected.
 
 ```
-// Literal
+// Literal of type Array<Int>
+// Arrays are a parametric typed-type.
 let xs = [1, 2, 3]
+
+// Empty arrays do not know what type they are since there
+// are no elements, so they must be annotated/casted with as!
+let xs: Array<Int> = []
+let xs = [] as Array<Int>
 
 // Access by index (warn: will raise an out of bounds!!)
 let first = xs[0]
@@ -518,6 +565,42 @@ let zs = [...xs, 4]          // [1, 2, 3, 4]
 let a = [1, 2]
 let b = [3, 4]
 let c = [...a, ...b]         // [1, 2, 3, 4]
+```
+
+## Array Slices
+
+Array slices allow for extracing a sub array from an existing array. Slices always produce a new array (due to array immutability) and never mutate the original.
+
+```
+// From index lo up to but not including hi
+xs[lo..hi]
+
+// From index lo to the end
+xs[lo..]
+
+// From the start up to but not including hi
+xs[..hi]
+
+// A copy of the whole array
+xs[..]
+
+// These slices compose nicely when you want to update
+// a value at an index in an array
+let xs = [1, 2, 3, 4, 5]
+
+// Update element at index 2
+let updated = [...xs[..2], 99, ...xs[3..]]    // [1, 2, 99, 4, 5]
+```
+
+## Negative Indices
+
+Negative indices count from the end of the array similar to python.
+
+```
+xs[-1]       // last element
+xs[-3..]     // last three elements
+xs[..-1]     // everything except the last element
+xs[-3..-1]   // third from last up to but not including last
 ```
 
 ## If Control Flow
@@ -659,8 +742,20 @@ let result = for x in [1, 2, 3] {
 }
 
 // An empty collection also produces ()
-let result = for x in [] {
+let result = for x in [] as Array<Int> {
     x
+}
+
+// The `continue` keyword can also be used in loops
+// which unlike break will instead skip to the next
+// iteration of the loop from the current point
+let mut number = 0
+for x in [1, 2, 3] {
+    if x == 2 {
+        continue
+    }
+
+    number += x
 }
 ```
 
@@ -763,13 +858,16 @@ Then in another file we can use the object created by main.f3
 
 ```
 // main.f3
-import math
+// the import keyword takes a relative path
+// or will scan from the directory of other included
+// directories in compilation if one cannot be found relatively
+import "math.f3"
 
 let result = math.add(1, 2)
 let area = math.pi * r * r
 
 // import with alias
-import math as m
+import "math.f3" as m
 let result = m.add(1, 2)
 ```
 
@@ -852,6 +950,8 @@ x |> f(y)       // equivalent to f(x, y)
     |> length
 
 // You can also use the _ placeholder for the value
+// anything referring to _ in the expression following the |> 
+// will be equal to x here so it'd be f(x)
 x |> f(_)
 
 "hello" |> _.upper()
@@ -913,6 +1013,18 @@ type Comparable = Any where (
 )
 ```
 
+As `has_method` only checks the existence and arity of a method, you may want to also guarantee the signature matches some expected types as defined in the function types section. We can do this with `has_method_sig` which extends `has_method` to do this (essentially `has_method` and the `function is type`)!
+
+```
+type Comparable<T> = T where (
+    fn(x) => has_method_sig(x, "compare", (T, T) -> Int)
+)
+
+type Displayable<T> = T where (
+    fn(x) => has_method_sig(x, "to_string", T -> String)
+)
+```
+
 ## Capabilities
 
 Capabilities are the mechanism for foreign function interfacing in `Lepton3`, which can call rust code directly from an instruction.
@@ -927,7 +1039,9 @@ pub fn open(path: String, mode: String) -> Option<FileDescriptor> => {
     try {
         // The cap function automatically handles pushing things on the stack for the capability handler to take
         Option.Some { value: cap(FILE_OPEN, path, mode) as FileDescriptor }
-    } catch _ {
+    
+    // When no identifier is passed to catch like catch <ident> the raised value is simply discarded
+    } catch {
         Option.None
     }
 }
@@ -947,11 +1061,15 @@ let Point { x, y } = my_point
 let Point { x: px, y: py } = my_point    // binds px and py
 
 // Only want a certain number of fields?
-let Point { x, _ } = my_point    // only binds x
+let Point { x } = my_point    // only binds x
 
 // Array destructuring
 let [first, second] = xs
 let [head, ...tail] = xs
+
+// Equivalent to
+let head = xs[0]
+let tail = xs[1..]
 
 // Nested
 let Point { x, y } = my_point
@@ -989,6 +1107,161 @@ for Point { x, y } in points {
 for [a, b] in pairs {
     print("${a} and ${b}")
 }
+```
+
+## Iterators
+
+How exactly is each element retrieved in a for loop using the `in` keyword? The `Iterator` protocol is used! The right hand side value (an array or something) must be an `Iterator` type which returns each element the for loop is iterating over.
+
+```
+type Iterator<T, Item> = T where (
+    // As types are immutable, we need to return the updated iterator which is advanced
+    fn(x) => has_method_sig(x, "next", T -> Option<Pair<Item, T>>)
+)
+
+// Array<T> contains something like this..
+type Array<T> = ... with {
+    fn next(self) -> Option<Pair<T, Array<T>>> => {
+        if self.length == 0 {
+            Option.None
+        } else {
+            Option.Some {
+                value: Pair {
+                    first: self[0],
+                    second: self[1..]
+                }
+            }
+        }
+    }
+}
+```
+
+And `for x in xs` desugars to roughly (not actually how codegen but):
+
+```
+let mut it = xs
+loop {
+    match it.next() {
+        Option.None => break,
+        Option.Some { value: Pair { first, second } } => {
+            let x = first
+            it = second
+            // loop body
+        }
+    }
+}
+```
+
+## Everything is an Expression
+
+As you may have guessed above! Everything in `Fermion3` is an expression and can appear where a value is expected as all constructs produce a value. This means `if`, `match`, `loop`, `while`, `for`, `try`/`catch`, `let`, `type` and `fn` declarations can all appear anywhere a value is expected and can be assigned, passed to functions, or returned.
+
+```
+// if is an expression
+let label = if x > 0 { 
+    "positive"
+} else {
+    "non-positive"
+}
+
+// match is an expression
+let area = match shape {
+    Shape.Circle { radius } => 3.14159 * radius * radius,
+    Shape.Rectangle { width, height } => width * height
+}
+
+// blocks are expressions, the last value is the result
+let sum = {
+    let a = 1
+    let b = 2
+    a + b
+}
+
+// loops are expressions, producing the value passed to break or ()
+let result = loop {
+    break 42
+}
+
+// try/catch is an expression
+let value = try {
+    parse_int(input)
+} catch e {
+    0
+}
+```
+
+`let`, `type`, and `fn` declarations are expressions that produce (). This means they can appear inside any block naturally, and a block is simply a sequence of expressions whose last expression is the block's value.
+
+```
+// a block is just a sequence of expressions
+// let and fn produce () and are used for their side effects
+// (binding a name), the final expression is the block's value
+let result = {
+    let x = 5               // ()
+    fn double(n) => n * 2   // ()
+    double(x)               // 10 => the value of the block.
+}
+```
+
+## The Never Type `Never`
+
+Some expressions never produce a value because they either jump somewhere else or abort execution entirely. These expressions have the `Never` type.
+
+```
+// these all have type Never
+break 42
+continue
+return 5
+raise "something went wrong"
+```
+
+`Never` can be used as a return type guard for functions that never return:
+
+```
+// a function that never returns
+fn panic(msg: String) -> Never => raise msg
+
+// Useful as an assertion helper
+fn assert(cond: Bool, msg: String) -> Never => {
+    if !cond {
+        raise msg
+    }
+}
+```
+
+`Never` is compatible with any type, which means a diverging branch in an if or match never causes a mismatch:
+
+```
+// the else branch has type Never but this is fine
+// since Never is compatible with Int
+let x: Int = if condition {
+    // Int
+    42
+} else {
+    // Never
+    panic("not reached")
+}
+
+// Same in match.
+fn unwrap<T>(opt: Option<T>) -> T => match opt {
+    Option.Some { value } => value,
+    Option.None => panic("called unwrap on None")
+}
+```
+
+## Uninhabitable Bindings
+
+Some types cannot be used as binding annotations since they carry no useful information. There are mainly two to be aware of:
+
+`Never` cannot be bound since no value of that type can ever exist. An expression of type `Never` always diverges before producing anything.
+
+`Any` cannot be bound as that would provide no guarantees and would skip all guard checking and obliterate the real type (think of an `object`, what type would it be if it was `Any`??). `Any` exists to be used as a constraint rather than as a concrete type.
+
+```
+// not valid
+let x: Never = ...
+let x: Any = ...
+let x = Any { x: 5, y: 5 } // ?? what is this object
 ```
 
 ## Entry Point
