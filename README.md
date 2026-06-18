@@ -25,6 +25,8 @@
 
 `Fermion3` aims to be an improvement of the prior `Faerlys` and `Quasar2` languages. As it is *essentially* version 3.0, there is a `3` at the end.
 
+This repository houses all of the related specification documents for `Fermion3`.
+
 <a name="community"></a>
 ## 🔭 Community
 
@@ -39,7 +41,7 @@ If you'd like to help build Fermion3, check out the **[Contributor's Guide](./CO
 <a name="fermion3-language"></a>
 ## 🧬 Fermion3 Language
 
-The `Fermion3` language syntax is described in the `LANGUAGE.md` file in the root of the repository, **[check it out](./LANGUAGE.md)** to learn. 
+The `Fermion3` language is described in the `LANGUAGE.md` file in the root of the repository, **[check it out](./LANGUAGE.md)** to learn. 
 
 <a name="license"></a>
 ## 🧾 License

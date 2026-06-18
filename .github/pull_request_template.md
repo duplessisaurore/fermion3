@@ -7,14 +7,6 @@
 ## Solution
  
 - Describe the solution to achieve the above objective
- 
-## Validation
-
-> If only documentation is being changed, this can be left out
-
-- Describe the methods used to validate the solution meets the objectives
-- How can the reviewer/s test the changes?
-- What platforms have you tested on?
 
 ---
 

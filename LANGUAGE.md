@@ -1264,6 +1264,35 @@ let x: Any = ...
 let x = Any { x: 5, y: 5 } // ?? what is this object
 ```
 
+## Defer
+
+The `defer` keyword runs an expression when the current scope exits, regardless of whether it exits normally or via a raised error. 
+
+This is useful for cleanup of capability-backed resources like file handles that need to be released regardless of what happens.
+
+```
+fn process_file(path: String) => {
+    let file = open(path)
+    defer close(file)
+
+    // close(file) is guaranteed to run when this scope exits
+    // even if read raises an error
+    let contents = read(file)
+    process(contents)
+}
+```
+
+Multiple defers run in LDRF (last deferred, run first) ordering.
+
+```
+fn example() => {
+    defer print("third")
+    defer print("second")
+    defer print("first")
+    // prints: first, second, third
+}
+```
+
 ## Entry Point
 
 Lastly, where does a `Fermion3` program begin? With the `main` function!
@@ -1276,4 +1305,3 @@ fn main(args) => {
 ```
 
 It must always take a parameter `args` which is the arguments to the program (if any).
-
