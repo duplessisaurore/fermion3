@@ -33,6 +33,11 @@ There is only a simple single way to write a comment, which begins with a `//`.
 // Octal
 0o1010
 
+// Unsigned integer literals via suffix of u, they cannot be signed
+42u
+0xFFu
+0b0111u
+
 // Floating point literals
 3.14
 -0.05
@@ -191,6 +196,7 @@ Shadowing is not mutation. The outer binding is never touched, and the shadow di
 // There are many primitive types in Fermion3, some of the most important are:
 Float
 Int
+UInt
 Bool
 Any (any type!)
 // .... and others
@@ -232,7 +238,7 @@ type Bounded<T, low, high> = T where (
 )
 
 // Using a parametric type, this Byte is an alias
-type Byte = Bounded<Int, 0, 255>
+type Byte = Bounded<UInt, 0, 255>
 
 // We can also guard this alias
 type NonZeroByte = Byte where (fn(x) => x != 0)
@@ -354,7 +360,7 @@ type Shape = enum {
 // We can also add methods to an alias
 // This is the byte type from earlier but with the `with` block
 // This keeps all the methods from bounded 
-type Byte = Bounded<Int, 0, 255> with {
+type Byte = Bounded<UInt, 0, 255> with {
     fn to_hex(self) => "0x${format_hex(self)}"
     fn to_binary(self) => "0b${format_binary(self)}"
 }
@@ -469,12 +475,25 @@ let value = 42 as T
 There is a special case when the target type is a primitive numeric type.
 
 ```
+//  Instead of checking guards and things. 
+// The `as Float` type cast will attempt to convert 
+// the value into a `Float` using lossy conversion. 
+// The same for the reverse (through truncation). 
 let x: Int = 42
 let y = x as Float    // 42.0
 let z = y as Int      // 42
-```
 
-Instead of checking guards and things. Instead, the `as Float` type cast will attempt to convert the value into a `Float` using lossy conversion. The same for the reverse (through truncation). 
+// UInt and Int conversions between INT
+// types is simple bit reinterpretation
+//
+// This is not the same as `as Float` which has special behaviour
+// UInts must be explicitly cast at all time! There is no implicit Int <-> UInt Conversion
+// like truncation!
+let y: UInt = x
+let y = x as UInt
+let z = y as Int   
+
+```
 
 ## Object Construction
 
@@ -784,7 +803,7 @@ type Bounded<T, low, high> = T where (
     fn(x) => x >= low && x <= high
 ) fail (fn(x) => "expected value between ${low} and ${high} but got ${x}")
 
-type Byte = Bounded<Int, 0, 255>
+type Byte = Bounded<UInt, 0, 255>
 
 type NonZeroByte = Byte where (
     fn(x) => x != 0
