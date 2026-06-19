@@ -903,7 +903,7 @@ macro fn swap(a, b) => '{
 }
 ```
 
-The quote operator `'(...)` or `'{ ... }` produces an AST value. The splice operator `$(...)` inserts a value into a quoted AST.
+The quote operator `'{ ... }` produces an AST value. The splice operator `$(...)` inserts a value into a quoted AST.
 
 ```
 // Invoke a macro using @ with the function name, this is at compile time rather than at runtime
@@ -948,8 +948,8 @@ if it print("found: ${it}") else print("not found")
 ```
 // This will match on the AST (notice we are not generating a quoted thing) and produce the output at compile time
 macro fn optimise_add(expr) => match expr {
-    '($(a) + 0) => a,
-    '(0 + $(b)) => b,
+    '{$(a) + 0} => a,
+    '{0 + $(b)} => b,
     other       => other
 }
 ```
