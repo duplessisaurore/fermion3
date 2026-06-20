@@ -121,7 +121,7 @@ add(1, 2)
 1 add 2
 ```
 
-Chaining multiple infix calls is not permitted without parenthesis for precedence (same for `+, -, *, /` and stuff since they're also a function!)
+Chaining multiple infix calls is not permitted without parenthesis for precedence for non-defined precedence things! However, sequences of the same operator can be used, e.g `(1 + 1 + 1 + 1) * 2 * 2` is valid still.
 
 ```
 // Illegal!
@@ -234,7 +234,7 @@ type UnitVector = object {
 
 // Types are values, so we can define a "parametric type" which is a type constructed with parameters
 type Bounded<T, low, high> = T where (
-    fn(x) => { x >= low && x <= high } 
+    fn(x) => { (x >= low) && (x <= high) } 
 )
 
 // Using a parametric type, this Byte is an alias
@@ -336,10 +336,10 @@ type UnitVector = object {
     x: Float,
     y: Float
 } where (
-    fn(v) => abs(sqrt(v.x**2 + v.y**2) - 1.0) < 0.0001
+    fn(v) => abs(sqrt((v.x ** 2) + (v.y ** 2)) - 1.0) < 0.0001
 ) with {
     fn dot(self, other) =>
-        self.x * other.x + self.y * other.y
+        (self.x * other.x) + (self.y * other.y)
 
     fn flip(self) => UnitVector { ...self, x: -self.x, y: -self.y }
 }
@@ -896,14 +896,14 @@ Macros are hygenic and operate on the AST. They are defined with `macro fn` (`pu
 
 ```
 // a macro is a function from AST to AST
-macro fn swap(a, b) => '{
+macro fn swap(a, b) => ``
     let tmp = $(a)
     $(a) = $(b)
     $(b) = tmp
-}
+``
 ```
 
-The quote operator `'{ ... }` produces an AST value. The splice operator `$(...)` inserts a value into a quoted AST.
+The quote operator ``` ``...`` ``` produces an AST value. The splice operator `$(...)` inserts a value into a quoted AST.
 
 ```
 // Invoke a macro using @ with the function name, this is at compile time rather than at runtime
@@ -927,10 +927,10 @@ To intentionally export a name to the call site, prefix it with `#`:
 
 ```
 // "it" can be referred to outside of this macro
-macro fn aif(cond, then_branch, else_branch) => '{
+macro fn aif(cond, then_branch, else_branch) => ``
     let #it = $(cond)
     if #it $(then_branch) else $(else_branch)
-}
+``
 
 // caller can refer to 'it'
 @aif(find_user(id),
@@ -945,11 +945,13 @@ if it print("found: ${it}") else print("not found")
 
 ## Pattern Matching in Macros
 
+Pattern matching can also be done on quotes as a pattern with splices to extract elements out of the quote!
+
 ```
 // This will match on the AST (notice we are not generating a quoted thing) and produce the output at compile time
 macro fn optimise_add(expr) => match expr {
-    '{$(a) + 0} => a,
-    '{0 + $(b)} => b,
+    ``$(a) + 0`` => a,
+    ``0 + $(b)`` => b,
     other       => other
 }
 ```
@@ -967,6 +969,10 @@ x |> f(y)       // equivalent to f(x, y)
     |> map(fn(x) => x * 2)
     |> filter(fn(x) => x > 2)
     |> length
+
+// Also same as
+[1, 2, 3] |> map(fn(x) => x * 2) |> filter(fn(x) => x > 2) |> length
+
 
 // You can also use the _ placeholder for the value
 // anything referring to _ in the expression following the |> 
