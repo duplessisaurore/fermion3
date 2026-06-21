@@ -1281,11 +1281,12 @@ The following table outlines the complete evaluation hierarchy and associativity
 | ---- | ---- | ---- |
 | **1** | Assignment `=` & Compound Assignment (`add=`) | Right-to-Left |
 | **2** | Pipeline `\|>` | Left-to-Right |
-| **3** | Binary Operations `x add y` | Left-to-Right |
-| **4** | Type Operations `as`, `is` | Left-to-Right |
-| **5** | Unary Operation  `-`, `!` | Right-to-Left |
-| **6** | Postfix Stuff `.`, `()`, `[]`, `<>` | Left-to-Right |
-| **7** | Atomic Units | Atomic (only one) |
+| **3** | Function Type `->` | Right-to-Left |
+| **4** | Binary Operations `x add y` | Left-to-Right |
+| **5** | Type Operations `as`, `is` | Left-to-Right |
+| **6** | Unary Operation  `-`, `!` | Right-to-Left |
+| **7** | Postfix Stuff `.`, `()`, `[]`, `<>` | Left-to-Right |
+| **8** | Atomic Units | Atomic (only one) |
 
 ## The Never Type `Never`
 
