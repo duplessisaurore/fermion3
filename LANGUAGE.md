@@ -169,11 +169,21 @@ Mutable bindings can be rebound but only within the scope they are declared in.
 
 ## Terminators
 
-Every statement must end with a semicolon `;`. This includes the final statement in a block `{}`. This may confuse people coming from a language where the last value of a block is only returned without a `;` but in `Fermion3` it makes no difference:
+The semicolon `;` separates statements within a sequence. This may be in a block's contents, a sequence of top-level items, or a macro quote body. It is required between statements, but never required after the last statement in a sequence, since the closing token `}`, or EOF at the top level already marks the end unambiguously.
 
 ```
-// `sum` is 2
-// The `;` after `a + b` does not discard the value.
+// no `;` needed after the last statement in a block
+let sum = {
+    let a = 1;
+    let b = 1;
+    a + b
+};
+```
+
+A trailing `;` after the last statement is still allowed, it just has no effect, since `;` is purely a separator and never changes what a block evaluates to:
+
+```
+// identical to the above — the trailing `;` here is a no-op
 let sum = {
     let a = 1;
     let b = 1;
@@ -181,31 +191,22 @@ let sum = {
 };
 ```
 
-A statement may freely span multiple lines, and multiple statements may freely share a single line:
+This maybe confusing when coming from other languages but please remember! To drill this in, semicolons are used everywhere explicitly in this document `:)`
 
+A statement may freely span multiple lines, and multiple statements may freely share one line, with identical meaning either way:
 ```
-// identical to the block above
-let sum = { let a = 1; let b = 1; a + b; };
-```
-
-This is uniform across all things and nothing bypasses this rule even statements such as `let`, `fn`, `type` etc.
-
-```
-// Semicolon needed!
-fn add(a, b) => {
-    a + b;
-};
+let sum = { let a = 1; let b = 1; a + b };
 ```
 
-`;` is only required directly after something that was parsed as a statement in a sequence.
+`;` is only ever meaningful directly between statements in a sequence. There are many places where it is not required outside of the last statement in a block too:
 
 ```
-// no `;` needed after the closure
+// Here you can see that the function closure is terminated
+// by the `)` because its consumed by the `map`.
 [1, 2, 3] |> map(fn(x) => x * 2);
 
-// the closure's own body is a block, so the stuff inside follows the normal
-// rule, but the closure as a whole still needs no `;` of its own as its an argument
-[1, 2, 3] |> map(fn(x) => { let y = x * 2; y; });
+// In a sequence inside the closure we still need semicolons tho!
+[1, 2, 3] |> map(fn(x) => { let y = x * 2; y });
 ```
 
 ## Shadowing
