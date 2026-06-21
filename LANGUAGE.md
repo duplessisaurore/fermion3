@@ -1273,6 +1273,20 @@ let result = {
 };
 ```
 
+## Expression Precedence and Associativity
+
+The following table outlines the complete evaluation hierarchy and associativity for expressions and how functions relate.
+
+| Level | Operator Category | Associativity |
+| ---- | ---- | ---- |
+| **1** | Assignment `=` & Compound Assignment (`add=`) | Right-to-Left |
+| **2** | Pipeline `\|>` | Left-to-Right |
+| **3** | Binary Operations `x add y` | Left-to-Right |
+| **4** | Type Operations `as`, `is` | Left-to-Right |
+| **5** | Unary Operation  `-`, `!` | Right-to-Left |
+| **6** | Postfix Stuff `.`, `()`, `[]`, `<>` | Left-to-Right |
+| **7** | Atomic Units | Atomic (only one) |
+
 ## The Never Type `Never`
 
 Some expressions never produce a value because they either jump somewhere else or abort execution entirely. These expressions have the `Never` type.
