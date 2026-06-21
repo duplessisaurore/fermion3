@@ -392,7 +392,7 @@ type Shape = enum {
     Rectangle { width: Float, height: Float },
     Point
 } with {
-    fn area(self) => match self {
+    fn area(self) => match self with {
         Shape.Circle { radius } => pi * radius * radius,
         Shape.Rectangle { width, height } => width * height,
         Shape.Point => 0.0
@@ -668,10 +668,11 @@ xs[-3..-1];   // third from last up to but not including last
 
 ```
 // Expression form (both branches required)
-let result = if x > 0 "positive" else "non-positive";
+// The form is generally if <condition> then blah...
+let result = if x > 0 then "positive" else "non-positive";
 
 // Block form
-if x > 0 {
+if x > 0 then {
     do_something();
     "positive";
 } else {
@@ -679,8 +680,8 @@ if x > 0 {
 };
 
 // Else-if exists for when that's needed.
-if x > 0 "positive"
-else if x < 0 "negative"
+if x > 0 then "positive"
+else if x < 0 then "negative"
 else "zero";
 ```
 
@@ -688,7 +689,8 @@ else "zero";
 
 ```
 // Match on values
-match x {
+// this is basically match <expression> with { arms.. }
+match x with {
     0 => "zero",
     1 => "one",
     n => "other: ${n}"
@@ -697,8 +699,9 @@ match x {
 // Match with extra if on the type
 // _ is a wildcard, for the last one if you want
 // to match anything just supply an identifier like above
-match x {
-    n if n > 0 => "positive",
+match x with {
+    // We can also guard, in this case "then" is optional as => is the "then"
+    n if n > 0 then => "positive",
     n if n < 0 => "negative",
     _ => "zero"
 };
@@ -706,13 +709,13 @@ match x {
 // Match on objects
 // Untyped object literals cannot be used directly.
 // A field can be rebound to another name on matching.
-match point {
+match point with {
     Point { x: 0.0, y } => "on y axis at ${y}",
     Point { x, y: my_y } => "at ${x}, ${my_y}"
 };
 
 // Match on arrays
-match xs {
+match xs with {
     []              => "empty",
     [x]             => "one element: ${x}",
     [x, y]          => "two elements",
@@ -725,20 +728,20 @@ type Result<T, E> = enum {
     Err { error: E }
 };
 
-match result {
+match result with {
     Result.Ok { value }  => value,
     Result.Err { error }    => raise error
 };
 
 // Match on enums with objects similar in the same way as Object matching
-match result {
+match result with {
     Shape.Circle { radius } => radius,
     Shape.Rectangle { width, height} => width * height,
     Shape.Point => 0.0
 };
 
 // Match with block body
-match n {
+match n with {
     0 => {
         print("got zero");
         "zero";
@@ -752,20 +755,20 @@ match n {
 ```
 // While loop, used for boolean condition
 let mut i = 0;
-while i < 10 {
+while i < 10 do {
     i = i + 1;
 };
 
 // For loop, used for an access to each element
 // in a collection
-for x in [1, 2, 3] {
+for x in [1, 2, 3] do {
     print(x);
 };
 
 // An infinite loop, which can be broken out of with the break keyword
 loop {
     let x = compute();
-    if x == 37 {
+    if x == 37 then {
         break;
     };
 };
@@ -778,8 +781,8 @@ let result = loop {
 };
 
 // The same applies to for and while loops
-let result = for x in [1, 2, 3] {
-    if x == 2 {
+let result = for x in [1, 2, 3] do {
+    if x == 2 then {
         break x; // result is 2
     };
 };
@@ -788,7 +791,7 @@ let result = for x in [1, 2, 3] {
 // If no break is reached, the loop returns the last value
 // produced by the block in its final iteration
 // Here the block's last expression is x, so result is 3
-let result = for x in [1, 2, 3] {
+let result = for x in [1, 2, 3] do {
     x;
 };
 
@@ -796,14 +799,14 @@ let result = for x in [1, 2, 3] {
 // the result may be () even if the loop ran
 // Here the block ends in an if with no else, which is ()
 // when the condition isn't met, so result is ()
-let result = for x in [1, 2, 3] {
-    if x == 99 {
+let result = for x in [1, 2, 3] do {
+    if x == 99 then {
         break x;
     };
 };
 
 // An empty collection also produces ()
-let result = for x in [] as Array<Int> {
+let result = for x in [] as Array<Int> do {
     x;
 };
 
@@ -811,8 +814,8 @@ let result = for x in [] as Array<Int> {
 // which unlike break will instead skip to the next
 // iteration of the loop from the current point
 let mut number = 0;
-for x in [1, 2, 3] {
-    if x == 2 {
+for x in [1, 2, 3] do {
+    if x == 2 then {
         continue;
     };
 
@@ -971,7 +974,7 @@ To intentionally export a name to the call site, prefix it with `#`:
 // "it" can be referred to outside of this macro
 macro fn aif(cond, then_branch, else_branch) => ``
     let #it = $(cond);
-    if #it $(then_branch) else $(else_branch);
+    if #it then $(then_branch) else $(else_branch);
 ``;
 
 // caller can refer to 'it'
@@ -982,7 +985,7 @@ macro fn aif(cond, then_branch, else_branch) => ``
 
 // This expands to:
 let it = find_user(id);
-if it print("found: ${it}") else print("not found");
+if it then print("found: ${it}") else print("not found");
 ```
 
 ## Pattern Matching in Macros
@@ -991,7 +994,7 @@ Pattern matching can also be done on quotes as a pattern with splices to extract
 
 ```
 // This will match on the AST (notice we are not generating a quoted thing) and produce the output at compile time
-macro fn optimise_add(expr) => match expr {
+macro fn optimise_add(expr) => match expr with {
     ``$(a) + 0`` => a,
     ``0 + $(b)`` => b,
     other       => other
@@ -1167,11 +1170,11 @@ And in for loops:
 
 ```
 // Destructure each element as it is bound
-for Point { x, y } in points {
+for Point { x, y } in points do {
     print("point at ${x}, ${y}");
 };
 
-for [a, b] in pairs {
+for [a, b] in pairs do {
     print("${a} and ${b}");
 };
 ```
@@ -1189,7 +1192,7 @@ type Iterator<T, Item> = T where (
 // Array<T> contains something like this..
 type Array<T> = ... with {
     fn next(self) -> Option<Pair<T, Array<T>>> => {
-        if self.length == 0 {
+        if self.length == 0 then {
             Option.None;
         } else {
             Option.Some {
@@ -1208,7 +1211,7 @@ And `for x in xs` desugars to roughly (not actually how, since last value is ret
 ```
 let mut it = xs;
 loop {
-    match it.next() {
+    match it.next() with {
         Option.None => break,
         Option.Some { value: Pair { first, second } } => {
             let x = first;
@@ -1225,14 +1228,14 @@ As you may have guessed above! Everything in `Fermion3` is an expression and can
 
 ```
 // if is an expression
-let label = if x > 0 { 
+let label = if x > 0 then { 
     "positive";
 } else {
     "non-positive";
 };
 
 // match is an expression
-let area = match shape {
+let area = match shape with {
     Shape.Circle { radius } => 3.14159 * radius * radius,
     Shape.Rectangle { width, height } => width * height
 };
@@ -1290,7 +1293,7 @@ fn panic(msg: String) -> Never => raise msg;
 
 // Useful as an assertion helper
 fn assert(cond: Bool, msg: String) -> Never => {
-    if !cond {
+    if !cond then {
         raise msg;
     };
 };
@@ -1301,7 +1304,7 @@ fn assert(cond: Bool, msg: String) -> Never => {
 ```
 // the else branch has type Never but this is fine
 // since Never is compatible with Int
-let x: Int = if condition {
+let x: Int = if condition then {
     // Int
     42;
 } else {
@@ -1310,7 +1313,7 @@ let x: Int = if condition {
 };
 
 // Same in match.
-fn unwrap<T>(opt: Option<T>) -> T => match opt {
+fn unwrap<T>(opt: Option<T>) -> T => match opt with {
     Option.Some { value } => value,
     Option.None => panic("called unwrap on None")
 };
