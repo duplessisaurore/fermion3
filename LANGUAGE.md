@@ -546,22 +546,13 @@ Object literals are untyped and cannot be used directly since they do not refer 
 { x: 1.0, y: 2.0 }
 ```
 
-To construct a typed object, the target type must be specified.
+To construct a typed object, the target type must be specified. This is the same for Enums.
 
 ```
 let my_point = Point {
     x: 1.0,
     y: 2.0
 };
-```
-
-This is sugar for writing out
-
-```
-let my_point = {
-    x: 1.0,
-    y: 2.0
-} as Point;
 ```
 
 ## Object Field Accessors
