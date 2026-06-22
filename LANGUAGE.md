@@ -828,7 +828,7 @@ A `fail` clause can be attached to a type with a guard, which is the error messa
 
 ```
 type Probability = Float
-    where (fn(x) => x >= 0.0 && x <= 1.0)
+    where (fn(x) => (x >= 0.0) && (x <= 1.0))
     fail (fn(x) => "expected a Float between 0.0 and 1.0 but got ${x}");
 ```
 
@@ -836,7 +836,7 @@ When a type is an alias over another, all guards in the chain run in order from 
 
 ```
 type Bounded<T, low, high> = T where (
-    fn(x) => x >= low && x <= high
+    fn(x) => (x >= low) && (x <= high)
 ) fail (fn(x) => "expected value between ${low} and ${high} but got ${x}");
 
 type Byte = Bounded<UInt, 0, 255>;
@@ -1145,7 +1145,7 @@ In function parameters:
 
 ```
 // Destructure directly in the parameter list
-fn magnitude(Point { x, y }) => sqrt(x**2 + y**2);
+fn magnitude(Point { x, y }) => sqrt((x**2) + (y**2));
 
 // Mixed with normal parameters
 fn translate(Point { x, y }, dx, dy) =>
