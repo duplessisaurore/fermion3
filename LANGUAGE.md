@@ -868,7 +868,7 @@ let b = 0 as NonZeroByte;
 // anything in try that raises will be caught.
 let result = try {
     divide(10, 0);
-} catch e {
+} catch e do {
     print("error: ${e}");
     -1;
 };
@@ -1110,8 +1110,7 @@ pub fn open(path: String, mode: String) -> Option<FileDescriptor> => {
         // The cap function automatically handles pushing things on the stack for the capability handler to take
         Option.Some { value: cap(FILE_OPEN, path, mode) as FileDescriptor };
     
-    // When no identifier is passed to catch like catch <ident> the raised value is simply discarded
-    } catch {
+    } catch _e do {
         Option.None;
     };
 };
@@ -1255,7 +1254,7 @@ let result = loop {
 // try/catch is an expression
 let value = try {
     parse_int(input);
-} catch e {
+} catch e do {
     0;
 };
 ```
